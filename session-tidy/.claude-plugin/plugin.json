@@ -1,0 +1,5 @@
+{
+  "name": "session-tidy",
+  "version": "0.1.0",
+  "description": "Archives Claude app sessions with no message for N days in the account the app has open, through the app's own archive action"
+}

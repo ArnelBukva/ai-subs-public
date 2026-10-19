@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Accounts &amp; sessions</title>
+<meta name="color-scheme" content="light dark">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f7f5f1; --card:#ffffff; --ink:#1a1a18; --muted:#6b6862; --dim:#9a958d;
+    --line:#e7e3dc; --soft:#f1eee8; --ok:#2f7d4f; --warn:#b06a12; --hot:#b4342a; --prog:#3f67a0;
+    --sel:#1a1a18; --shadow:0 1px 2px rgba(20,18,14,.05), 0 6px 18px rgba(20,18,14,.06);
+    --t0:#f6efe6; --t1:#eaf1ee; --t2:#ecf0f7; --t3:#f1eef5; --t4:#f5eeee; --t5:#eef3f5; --t6:#f3f2e8;
+    --tx0:#8a5a2b; --tx1:#3d6b57; --tx2:#44608f; --tx3:#6a5487; --tx4:#8f4a4a; --tx5:#3f6c7c; --tx6:#6d6630;
+  }
+  @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+    --bg:#141412; --card:#1e1d1a; --ink:#f2efe9; --muted:#a8a29a; --dim:#726d65;
+    --line:#2e2c28; --soft:#262420; --ok:#6cc48c; --warn:#e0a355; --hot:#ec7a6e; --prog:#8fb0e0; --sel:#f2efe9;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+    --t0:#2a231c; --t1:#1c2622; --t2:#1b2130; --t3:#241f2b; --t4:#2b1e1e; --t5:#1b2529; --t6:#26251b;
+    --tx0:#e0b58a; --tx1:#8fcbb0; --tx2:#9db6e3; --tx3:#c2ade0; --tx4:#e3a3a3; --tx5:#93c6d6; --tx6:#d3ca8c; }}
+  :root[data-theme="dark"]{
+    --bg:#141412; --card:#1e1d1a; --ink:#f2efe9; --muted:#a8a29a; --dim:#726d65;
+    --line:#2e2c28; --soft:#262420; --ok:#6cc48c; --warn:#e0a355; --hot:#ec7a6e; --prog:#8fb0e0; --sel:#f2efe9;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+    --t0:#2a231c; --t1:#1c2622; --t2:#1b2130; --t3:#241f2b; --t4:#2b1e1e; --t5:#1b2529; --t6:#26251b;
+    --tx0:#e0b58a; --tx1:#8fcbb0; --tx2:#9db6e3; --tx3:#c2ade0; --tx4:#e3a3a3; --tx5:#93c6d6; --tx6:#d3ca8c; }
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:400 15px/1.5 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    -webkit-font-smoothing:antialiased;padding:36px 16px 140px}
+  .wrap{max-width:1040px;margin:0 auto}
+  header{display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:22px}
+  h1{font-size:22px;font-weight:600;margin:0;letter-spacing:-.01em}
+  .meta{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  button{font:inherit;font-size:13px;color:var(--muted);background:var(--card);border:1px solid var(--line);
+    border-radius:7px;padding:5px 11px;cursor:pointer;transition:color .12s,border-color .12s,background-color .12s}
+  button:hover{color:var(--ink);border-color:color-mix(in srgb,var(--ink) 25%,var(--line))}
+  button:disabled{opacity:.5;cursor:default}
+  button:focus-visible,input:focus-visible,.acct:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+  button.primary{background:var(--ink);color:var(--bg);border-color:var(--ink);font-weight:500;padding:8px 16px;font-size:14px}
+  button.primary:hover{opacity:.9;color:var(--bg)}
+
+  /* subscriptions */
+  .pick{background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);
+    padding:13px 18px;margin-bottom:14px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+  .pick .lead{font-weight:600}
+  .pick .sub{font-size:13px;color:var(--muted)}
+  .pick.none .lead{color:var(--hot)}
+  .grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(236px,1fr));margin-bottom:8px}
+  .scard{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);
+    overflow:hidden;display:flex;flex-direction:column}
+  .scard.best{border-color:color-mix(in srgb,var(--ok) 50%,var(--line))}
+  .shead{padding:13px 16px 11px;display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+  .scard[data-p="Anthropic"] .shead{background:var(--t0)} .scard[data-p="OpenAI"] .shead{background:var(--t1)}
+  .scard[data-p="Google"] .shead{background:var(--t2)} .scard[data-p="Other"] .shead{background:var(--t3)}
+  .sname{font-weight:600;font-size:15px;letter-spacing:-.01em}
+  .splan{font-size:12px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .chip{font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;white-space:nowrap;border:1px solid var(--line);color:var(--dim)}
+  .chip.ok{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 30%,transparent)}
+  .chip.warn{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 35%,transparent)}
+  .chip.hot{color:var(--hot);border-color:color-mix(in srgb,var(--hot) 35%,transparent)}
+  .sbody{padding:10px 16px 12px;display:grid;gap:10px;flex:1}
+  .wtop{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted);margin-bottom:4px}
+  .wtop b{font-size:13px;color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+  .track{height:5px;border-radius:99px;background:var(--line);overflow:hidden}
+  .track i{display:block;height:100%;border-radius:99px;background:var(--ok)}
+  .track i.warn{background:var(--warn)} .track i.hot{background:var(--hot)}
+  .wfoot{font-size:11.5px;color:var(--dim);margin-top:3px}
+  .snote{font-size:12px;color:var(--muted);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 9px}
+  .sfoot{border-top:1px solid var(--line);padding:9px 12px 11px;display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px;color:var(--muted)}
+  .sfoot .n{grid-column:1 / -1;padding-left:4px}
+  .sfoot button{padding:4px 8px;font-size:12px}
+  .sfoot button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+  .runway{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:6px 18px 12px;margin-top:14px;overflow-x:auto}
+  .runway h3{font-size:15px;font-weight:600;margin:10px 0 2px;letter-spacing:-.01em}
+  .runway .hint{font-size:12.5px;color:var(--muted);margin:0 0 8px}
+  .runway table{width:100%;border-collapse:collapse;font-size:13px;min-width:640px}
+  .runway th{font-weight:500;color:var(--muted);text-align:left;padding:8px 10px 6px 0;border-bottom:1px solid var(--line);white-space:nowrap}
+  .runway td{padding:8px 10px 8px 0;border-bottom:1px solid var(--line);vertical-align:top;font-variant-numeric:tabular-nums}
+  .runway tr:last-child td{border-bottom:0}
+  .runway .who b{font-weight:600} .runway .who small{display:block;color:var(--dim);font-size:12px}
+  .wk{display:inline-block;border:1px solid var(--line);border-radius:6px;padding:0 6px;margin:0 4px 4px 0;font-size:12px;white-space:nowrap}
+  .wk.out{color:var(--hot);border-color:color-mix(in srgb,var(--hot) 35%,var(--line))}
+  .wk.ok{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 30%,var(--line))}
+  .muted{color:var(--dim)}
+  .section{font-size:17px;font-weight:600;letter-spacing:-.01em;color:var(--ink);margin:30px 0 4px;display:block}
+  .route{font-size:13px;color:var(--muted);margin:0 0 14px}
+  .route b{color:var(--ink);font-weight:600}
+
+  /* toolbar */
+  .tools{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:6px}
+  .tools input[type=search]{flex:1;min-width:200px;font:inherit;font-size:14px;color:var(--ink);background:var(--card);
+    border:1px solid var(--line);border-radius:8px;padding:7px 12px}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--card)}
+  .seg button{border:0;border-radius:0;padding:6px 11px}
+  .seg button[aria-pressed="true"]{background:var(--soft);color:var(--ink);font-weight:500}
+
+  /* list */
+  h2{font-size:13px;font-weight:500;color:var(--muted);margin:22px 2px 8px;display:flex;gap:8px}
+  h2 span{color:var(--dim)}
+  .list{display:grid;gap:8px}
+  .row{display:grid;grid-template-columns:28px 1fr auto;gap:10px 14px;align-items:start;background:var(--card);
+    border:1px solid var(--line);border-radius:12px;padding:13px 16px 13px 14px;cursor:pointer;
+    transition:border-color .12s,box-shadow .12s}
+  .row:hover{border-color:color-mix(in srgb,var(--ink) 18%,var(--line))}
+  .row.on{border-color:var(--sel);box-shadow:inset 0 0 0 1px var(--sel)}
+  .row.old{opacity:.72}
+  .row input{appearance:none;margin:3px 0 0;width:18px;height:18px;border:1.5px solid color-mix(in srgb,var(--ink) 35%,var(--line));
+    border-radius:5px;background:var(--card);cursor:pointer;display:grid;place-content:center;transition:background-color .12s,border-color .12s}
+  .row input:checked{background:var(--sel);border-color:var(--sel)}
+  .row input:checked::after{content:"";width:9px;height:5px;border:2px solid var(--bg);border-top:0;border-right:0;transform:translateY(-1px) rotate(-45deg)}
+  .top{display:flex;gap:8px;align-items:center;flex-wrap:wrap;min-width:0}
+  .proj{font-size:12px;font-weight:500;border-radius:6px;padding:1px 7px;white-space:nowrap}
+  .title{font-weight:600;font-size:15px;letter-spacing:-.005em}
+  .now{font-size:15px;margin-top:3px;text-wrap:pretty}
+  .now.none{color:var(--dim)}
+  .sub{font-size:13px;color:var(--muted);margin-top:4px;text-wrap:pretty}
+  .you{font-size:13px;color:var(--muted);margin-top:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .you b{font-weight:500;color:var(--ink)}
+  .side{display:flex;flex-direction:column;align-items:flex-end;gap:6px;text-align:right;min-width:128px}
+  .when{font-size:13px;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .when small{display:block;color:var(--dim);font-size:12px}
+  .state{font-size:12px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;color:var(--muted)}
+  .state i{width:7px;height:7px;border-radius:50%;background:var(--dim)}
+  .state.wait i{background:var(--warn)} .state.wait{color:var(--warn)}
+  .state.prog i{background:var(--prog)}
+  .state.block i{background:var(--hot)} .state.block{color:var(--hot)}
+  .state.live i{background:var(--ok);animation:pulse 1.6s ease-in-out infinite} .state.live{color:var(--ok)}
+  @keyframes pulse{50%{opacity:.35}}
+  @media (prefers-reduced-motion:reduce){.state.live i{animation:none}}
+  .tag{font-size:12px;color:var(--muted);white-space:nowrap}
+  .tag.done{color:var(--ok)}
+  .more{grid-column:2 / -1;display:flex;gap:8px;flex-wrap:wrap}
+  .more button{padding:3px 9px;font-size:12px}
+  pre.packet{grid-column:2 / -1;margin:2px 0 0;background:var(--soft);border-radius:8px;padding:12px 14px;
+    font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;max-height:340px;overflow:auto;cursor:text}
+  .empty{color:var(--muted);font-size:14px;padding:28px 4px}
+
+  /* action bar */
+  .bar{position:fixed;left:0;right:0;bottom:0;padding:0 16px 18px;pointer-events:none}
+  .bar .in{max-width:1040px;margin:0 auto;background:var(--card);border:1px solid var(--line);border-radius:14px;
+    box-shadow:0 8px 30px rgba(20,18,14,.14);padding:12px 14px 12px 18px;display:flex;gap:12px;align-items:center;
+    flex-wrap:wrap;pointer-events:auto;transform:translateY(0);transition:transform .2s ease-out,opacity .2s ease-out}
+  .bar.hide .in{transform:translateY(130%);opacity:0;pointer-events:none;transition-duration:.15s}
+  .bar .what{flex:1;min-width:220px;font-size:14px}
+  .bar .what small{display:block;color:var(--muted);font-size:12px}
+  .queue{display:grid;gap:6px;flex-basis:100%;max-height:220px;overflow:auto;padding-top:4px}
+  .q{display:flex;gap:10px;align-items:center;font-size:13px}
+  .q .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .q .ok{color:var(--ok)} .q .err{color:var(--hot)}
+  .toast{position:fixed;top:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);
+    padding:8px 14px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .15s;pointer-events:none;max-width:90vw}
+  .toast.show{opacity:1}
+  @media (max-width:640px){
+    .row{grid-template-columns:24px 1fr}
+    .side{grid-column:2;align-items:flex-start;flex-direction:row;flex-wrap:wrap;text-align:left;min-width:0}
+    .arow{grid-template-columns:1fr}
+    .arow .lbl{padding-top:0}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Accounts &amp; sessions</h1>
+    <div class="meta"><span id="updated">Loading…</span><button id="reusage">Refresh usage</button><button id="resum" title="Ask Haiku to refresh the summaries of sessions that changed">Refresh summaries</button></div>
+  </header>
+
+  <div class="pick" id="pick" hidden></div>
+  <div class="grid" id="subs" aria-label="Subscriptions"></div>
+
+  <section class="runway" id="runway" aria-label="Weekly runway"></section>
+
+  <h2 class="section">Carry sessions over</h2>
+  <p class="route" id="route"></p>
+  <div class="tools">
+    <input type="search" id="q" placeholder="Search title, project, summary or your last message" aria-label="Search sessions">
+    <div class="seg" role="group" aria-label="Time range" id="range">
+      <button data-r="1" aria-pressed="false">Today</button>
+      <button data-r="3" aria-pressed="true">3 days</button>
+      <button data-r="0" aria-pressed="false">All</button>
+    </div>
+    <button id="pickOpen">Select unfinished work (last 12 h)</button>
+  </div>
+
+  <div id="groups"></div>
+</div>
+
+<div class="bar hide" id="bar"><div class="in">
+  <div class="what" id="what"></div>
+  <button id="copyBtn">Copy packets instead</button>
+  <button class="primary" id="moveBtn">Move</button>
+  <div class="queue" id="queue" hidden></div>
+</div></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const store = {get(k){try{return localStorage.getItem(k)}catch(e){return null}}, set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+let data = {sessions:[], accounts:[], usage:{}};
+let from = store.get('from') || '', to = store.get('to') || '', range = +(store.get('range') ?? 3), q = '';
+const picked = new Set(), open = new Set();
+
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const acctBy = k => data.accounts.find(a => a.key === k);
+const acctName = k => (acctBy(k)||{}).label || (k ? 'Account ' + k.slice(0,8) : 'unknown account');
+const hue = s => { let h = 0; for (const c of s) h = (h*31 + c.charCodeAt(0)) >>> 0; return h % 7; };
+const clock = t => new Date(t*1000).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+const day = t => new Date(t*1000).toLocaleDateString([], {weekday:'short', day:'numeric', month:'short'});
+
+function bucket(t){
+  const now = new Date(), d = new Date(t*1000), age = (now - d)/1000;
+  if (age < 3600) return 'Last hour';
+  const start = new Date(now); start.setHours(0,0,0,0);
+  if (d >= start) return 'Earlier today';
+  if (d >= new Date(start - 864e5)) return 'Yesterday';
+  if (d >= new Date(start - 6*864e5)) return 'This week';
+  return 'Older';
+}
+function stateOf(s){
+  if (s.active) return ['live', 'Running now'];
+  const st = (s.state||'').toLowerCase();
+  if (st.startsWith('waiting')) return ['wait', 'Waiting on you'];
+  if (st.startsWith('block')) return ['block', 'Blocked'];
+  if (st.startsWith('in progress')) return ['prog', 'In progress'];
+  if (st.startsWith('finish')) return ['done', 'Finished'];
+  return ['', st || 'No summary yet'];
+}
+
+function visible(){
+  const cutoff = range ? Date.now()/1000 - range*86400 : 0;
+  const norm = t => String(t||'').toLowerCase().replace(/[-_\/.]+/g, ' ');   // 'iq-test' finds 'IQ test'
+  const needle = norm(q).trim();
+  return data.sessions.filter(s =>
+    (!from || s.account === from) && s.at >= cutoff &&
+    (!needle || norm([s.title, s.project, s.cwd, s.now, s.lastYou, (s.recent||[]).join(' ')].join(' ')).includes(needle)));
+}
+
+const band = p => p >= 90 ? 'hot' : p >= 70 ? 'warn' : 'ok';
+function chipFor(a){
+  if (a.status === 'needs_login') return '<span class="chip">Sign in needed</span>';
+  if (a.status === 'error') return '<span class="chip hot">Unavailable</span>';
+  const worst = Math.max(-1, ...(a.windows||[]).map(w => w.percentUsed ?? -1));
+  if (worst < 0) return '<span class="chip">No data</span>';
+  return `<span class="chip ${band(worst)}">${worst >= 100 ? 'Used up' : worst >= 90 ? 'Nearly out' : worst >= 70 ? 'Going fast' : 'Healthy'}</span>`;
+}
+function subCard(a){
+  const key = a.appKey || '';
+  const count = key ? data.sessions.filter(s => s.account === key).length : 0;
+  const name = key ? acctName(key) : (a.account || a.provider);
+  const wins = (a.windows||[]).map(w => { const p = Math.max(0, Math.min(100, w.percentUsed ?? 0));
+    return `<div><div class="wtop"><span>${esc(w.label)}</span><b>${w.percentUsed ?? '—'}%</b></div>
+      <div class="track"><i class="${band(p)}" style="width:${p}%"></i></div>${w.resetsIn ? `<div class="wfoot">Resets in ${esc(w.resetsIn)}</div>` : ''}</div>`; }).join('');
+  const foot = key ? `<div class="sfoot"><span class="n">${count} recent ${count === 1 ? 'session' : 'sessions'}</span>
+      <button data-k="${key}" data-kind="from" aria-pressed="${from === key}">Move from</button>
+      <button data-k="${key}" data-kind="to" aria-pressed="${to === key}">Move to</button></div>` : '';
+  const dup = key ? (data.duplicates || {})[key] || [] : [];
+  const dupNote = dup.length ? `<div class="snote dup">${dup.length} ${dup.length > 1 ? 'sessions are' : 'session is'} listed more than once here
+      (${dup.reduce((n, d) => n + d.extra, 0)} extra ${dup.reduce((n, d) => n + d.extra, 0) > 1 ? 'copies' : 'copy'}). <button id="dedupe" style="padding:1px 8px;font-size:12px">Remove extra copies</button></div>` : '';
+  const group = ['Anthropic','OpenAI','Google'].includes(a.provider) ? a.provider : 'Other';
+  return `<div class="scard${a.id && a.id === (data.pick||{}).id ? ' best' : ''}" data-p="${group}">
+    <div class="shead"><div style="min-width:0"><div class="sname">${esc(a.provider === 'Anthropic' ? 'Claude · ' + name : a.account || a.provider)}</div>
+      <div class="splan">${esc(a.plan || '')}${key && acctBy(key)?.email ? ' · ' + esc(acctBy(key).email) : ''}${key && key === data.appAccount ? ' · <b>open in the Claude app</b>' : ''}</div></div>${chipFor(a)}</div>
+    <div class="sbody">${wins || `<div class="snote">${esc(a.note || 'Nothing to show yet.')}</div>`}${wins && a.note ? `<div class="snote">${esc(a.note)}</div>` : ''}${dupNote}</div>${foot}</div>`;
+}
+let runway = null;
+const d1 = x => x == null ? '—' : (x >= 10 ? Math.round(x) : x.toFixed(1)) + 'd';
+const mon = m => new Date(m + '-01T00:00').toLocaleDateString([], {month:'short', year:'2-digit'});
+function renderRunway(){
+  const el = $('#runway'); if (!runway) { el.hidden = true; return; } el.hidden = false;
+  const rows = [];
+  for (const [id, a] of Object.entries(runway.accounts || {})) {
+    for (const [label, weeks] of Object.entries(a.windows)) {
+      const live = weeks.find(w => w.live);
+      const past = weeks.filter(w => !w.live).slice(0, 6);
+      let now = '<span class="muted">—</span>';
+      if (live) {
+        now = `${live.last}% used · day ${Math.min(7, live.elapsed_days).toFixed(1)} of 7`;
+        if (live.out_before_tracking) now += ` · <span style="color:var(--hot)">already used up when tracking began</span>`;
+        else if (live.lasted_days != null) now += ` · <span style="color:var(--hot)">ran out on day ${live.lasted_days.toFixed(1)}</span>`;
+        else if (live.projected_days != null) now += live.projected_days < 7
+          ? ` · <span style="color:var(--warn)">on pace to run out on day ${live.projected_days}</span>`
+          : ' · <span style="color:var(--ok)">on pace to last the week</span>';
+        if (live.partial) now += ' <span class="muted">(tracking began mid-week)</span>';
+      }
+      const hist = past.length ? past.map(w => w.lasted_days != null
+          ? `<span class="wk out" title="Week from ${w.start.slice(0,10)}">${d1(w.lasted_days)}</span>`
+          : `<span class="wk ok" title="Week from ${w.start.slice(0,10)}">lasted · peak ${w.peak}%</span>`).join('')
+        : '<span class="muted">first week still running</span>';
+      const months = ((a.months || {})[label] || []).slice(0, 3).map(m =>
+        `${mon(m.month)}: ${m.avg_lasted_days != null ? d1(m.avg_lasted_days) + ' avg' : 'never ran out'} <span class="muted">(${m.ran_out}/${m.weeks} ran out)</span>`).join('<br>') || '<span class="muted">after the first full week</span>';
+      rows.push(`<tr><td class="who"><b>${esc((a.account || id).startsWith('Claude · ') ? a.account.split(' · ')[1] : (a.account || id))}</b><small>${esc(label)}</small></td><td>${now}</td><td>${hist}</td><td>${months}</td></tr>`);
+    }
+  }
+  const since = runway.since ? new Date(runway.since).toLocaleDateString([], {day:'numeric', month:'short'}) : 'now';
+  el.innerHTML = `<h3>Weekly runway</h3><p class="hint">How long each weekly allowance lasts before it runs out. Tracking since ${esc(since)}; a week counts in the averages once it has run from start to reset.</p>` +
+    (rows.length ? `<table><thead><tr><th>Account</th><th>This week</th><th>Past weeks (days until 100%)</th><th>Monthly average</th></tr></thead><tbody>${rows.join('')}</tbody></table>`
+                 : '<p class="hint">No readings yet.</p>');
+}
+
+function renderAccounts(){
+  const rows = (data.subscriptions||[]).slice();
+  // app accounts ai-subs does not track still need a card, so sessions there can be picked
+  data.accounts.filter(a => !rows.some(r => r.appKey === a.key) && data.sessions.some(s => s.account === a.key)).forEach(a =>
+    rows.push({provider:'Anthropic', appKey:a.key, plan:'Usage not tracked', windows:[], status:'ok'}));
+  $('#subs').innerHTML = rows.map(subCard).join('');
+  const p = data.pick || {}, pk = $('#pick');
+  if (p.id){ pk.className = 'pick'; pk.hidden = false;
+    pk.innerHTML = `<span class="lead">Most room: ${esc(p.appKey ? 'Claude · ' + acctName(p.appKey) : p.provider + ' · ' + p.account)}</span><span class="sub">${p.headroom}% of its fullest window still free</span>`; }
+  else if (p.exhausted){ pk.className = 'pick none'; pk.hidden = false;
+    pk.innerHTML = `<span class="lead">Everything is used up</span>${p.nextReset ? `<span class="sub">First back: ${esc(p.nextReset.account)} in ${esc(p.nextReset.in || '')}</span>` : ''}`; }
+  else pk.hidden = true;
+  if (data.usageDown){ pk.className = 'pick none'; pk.hidden = false; pk.innerHTML = '<span class="lead">Usage unavailable</span><span class="sub">The ai-subs collector is not answering.</span>'; }
+  $('#route').innerHTML = `From <b>${from ? esc(acctName(from)) : 'all accounts'}</b> to <b>${to ? esc(acctName(to)) : '—'}</b>` +
+    `${from ? ' · <button id="allFrom" style="padding:1px 8px;font-size:12px">Show all accounts</button>' : ''} <span style="color:var(--dim)">· choose with Move from / Move to on the cards</span>`;
+}
+
+function row(s){
+  const [cls, label] = stateOf(s);
+  const t = hue(s.project);
+  const recent = (s.recent||[]).filter(r => r && r.trim().toLowerCase() !== (s.now||'').trim().toLowerCase()).slice(0,2);
+  const carried = s.carried ? (s.carried.how === 'moved' ? `Moved to ${esc(acctName(s.carried.to))}` : 'Packet copied') + ' ✓' : '';
+  const also = (s.inAccounts||[]).filter(k => k !== s.account);
+  return `<div class="row ${picked.has(s.path) ? 'on' : ''} ${bucket(s.at) === 'Older' ? 'old' : ''}" data-p="${esc(s.path)}">
+    <input type="checkbox" aria-label="Select ${esc(s.title)}" ${picked.has(s.path) ? 'checked' : ''}>
+    <div style="min-width:0">
+      <div class="top"><span class="proj" style="background:var(--t${t});color:var(--tx${t})">${esc(s.project)}</span>
+        <span class="title">${esc(s.title)}</span>${s.kind === 'codex' ? '<span class="tag">Codex</span>' : ''}</div>
+      <div class="now ${s.now ? '' : 'none'}">${esc(s.now || 'Summary on its way — the menu writes one within a few minutes.')}</div>
+      ${recent.length ? `<div class="sub">Before: ${recent.map(esc).join(' · ')}</div>` : ''}
+      ${s.next ? `<div class="sub">Next: ${esc(s.next)}</div>` : ''}
+      ${s.lastYou ? `<div class="you"><b>You said:</b> “${esc(s.lastYou)}”</div>` : ''}
+    </div>
+    <div class="side">
+      <div class="when">${esc(s.ago === 'now' ? 'just now' : s.ago + ' ago')}<small>${bucket(s.at).startsWith('Last') || bucket(s.at) === 'Earlier today' ? clock(s.at) : day(s.at) + ' ' + clock(s.at)}</small></div>
+      <span class="state ${cls}"><i></i>${esc(label)}</span>
+      <span class="tag">${s.kind === 'codex' ? 'Codex app, not in Claude' : esc(acctName(s.account))}${also.length ? ' + ' + also.map(acctName).map(esc).join(', ') : ''}</span>
+      ${carried ? `<span class="tag done">${carried}</span>` : ''}
+    </div>
+    <div class="more"><button data-a="packet">${open.has(s.path) ? 'Hide packet' : 'Show packet'}</button>${s.kind === 'claude' ? '<button data-a="resume">Resume in Terminal</button>' : ''}<span class="tag" style="align-self:center">${s.sizeKb.toLocaleString()} KB · ${esc(s.cwd)}</span></div>
+    ${open.has(s.path) ? `<pre class="packet" data-pk="${esc(s.path)}">Loading…</pre>` : ''}
+  </div>`;
+}
+
+function renderList(){
+  const list = visible();
+  if (!list.length){ $('#groups').innerHTML = `<div class="empty">No sessions match. Try “All” or another account.</div>`; return; }
+  const order = ['Last hour','Earlier today','Yesterday','This week','Older'];
+  const g = {}; list.forEach(s => (g[bucket(s.at)] ||= []).push(s));
+  $('#groups').innerHTML = order.filter(k => g[k]).map(k =>
+    `<h2>${k} <span>${g[k].length}</span></h2><div class="list">${g[k].map(row).join('')}</div>`).join('');
+  document.querySelectorAll('pre.packet').forEach(async el => {
+    const r = await fetch('/api/packet?path=' + encodeURIComponent(el.dataset.pk)).then(r => r.json()).catch(() => ({}));
+    el.textContent = r.text || 'Could not build the packet.';
+  });
+}
+
+function renderBar(){
+  const sel = data.sessions.filter(s => picked.has(s.path));
+  const bar = $('#bar');
+  if ($('#queue').hidden) bar.classList.toggle('hide', !sel.length);
+  if (!sel.length) return;
+  const codex = sel.filter(s => s.kind === 'codex').length;
+  const already = sel.filter(s => s.kind === 'claude' && s.account === to).length;
+  const u = data.usage[to];
+  $('#what').innerHTML = `${sel.length} selected → <b>${esc(to ? acctName(to) : 'pick an account under “To”')}</b>` +
+    `<small>${[u && u.full ? 'That account is full too.' : '', codex ? `${codex} Codex ${codex > 1 ? 'sessions' : 'session'} can only go as a packet.` : '',
+      already ? `${already} already ${already > 1 ? 'are' : 'is'} in that account.` : '',
+      to && to === data.appAccount ? 'The Claude app takes each one into its sidebar right away, but files it under the right project only after its next restart. Next time, move before you switch accounts.'
+        : 'They show in that account’s sidebar when you switch the Claude app to it.'].filter(Boolean).join(' ')}</small>`;
+  const movable = sel.length - codex - already;
+  if (moving) return;
+  $('#moveBtn').textContent = !to ? 'Pick “Move to” first' : movable ? `Move ${movable} ${movable > 1 ? 'sessions' : 'session'}`
+    : codex ? 'Codex sessions: copy the packets' : 'Already in that account';
+  $('#moveBtn').disabled = !to || !movable;
+}
+
+function render(){ renderAccounts(); renderRunway(); renderList(); renderBar(); }
+
+function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 3200); }
+const post = (u, body) => fetch(u, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)}).then(r => r.json());
+
+async function load(refresh){
+  try {
+    [data, runway] = await Promise.all([fetch('/api/sessions' + (refresh ? '?refresh=1' : '')).then(r => r.json()),
+      fetch('/api/weeks').then(r => r.json()).catch(() => null)]);
+  } catch(e){ $('#updated').textContent = 'Could not reach the picker server.'; return; }
+  const keys = data.accounts.map(a => a.key);
+  if (from && !keys.includes(from)) from = '';
+  if (store.get('from') === null){
+    const full = data.accounts.filter(a => (data.usage[a.key]||{}).full)
+      .map(a => [a.key, data.sessions.filter(s => s.account === a.key).length]).sort((x,y) => y[1]-x[1]);
+    if (full.length && full[0][1]) from = full[0][0];
+  }
+  if (!to || !keys.includes(to)){   // default target: the account open in the Claude app, else the one with the most room
+    if (data.appAccount && keys.includes(data.appAccount)) to = data.appAccount;
+    else if (data.pick && data.pick.appKey) to = data.pick.appKey;
+    else { const byRoom = data.accounts.filter(a => data.usage[a.key]).sort((a,b) => data.usage[a.key].percent - data.usage[b.key].percent);
+    to = (byRoom[0] || data.accounts[0] || {}).key || ''; }
+  }
+  const aa = data.autoArchive || {};
+  $('#updated').textContent = `${data.sessions.length} sessions · updated ${clock(data.generatedAt)}` +
+    (aa.enabled ? ` · auto-archive after ${aa.days} days` + (aa.last ? `, last check ${clock(aa.last.at)} (${aa.last.archived} archived)` : ', first check within the hour')
+                : ' · auto-archive off');
+  render();
+}
+
+document.addEventListener('click', async e => {
+  if (e.target.id === 'allFrom'){ from = ''; store.set('from', ''); return render(); }
+  if (e.target.id === 'dedupe'){ e.target.disabled = true; e.target.textContent = 'Removing…';
+    const r = await post('/api/dedupe', {}).catch(() => ({message:'The server did not answer.'}));
+    toast(r.message); return load(); }
+  const chip = e.target.closest('.sfoot button');
+  if (chip){
+    if (chip.dataset.kind === 'from'){ from = from === chip.dataset.k ? '' : chip.dataset.k; store.set('from', from); }
+    else { to = chip.dataset.k; store.set('to', to); }
+    return render();
+  }
+  const seg = e.target.closest('#range button');
+  if (seg){ range = +seg.dataset.r; store.set('range', range);
+    document.querySelectorAll('#range button').forEach(b => b.setAttribute('aria-pressed', b === seg)); return renderList(); }
+  const rowEl = e.target.closest('.row');
+  if (rowEl && !e.target.closest('pre')){
+    const p = rowEl.dataset.p, a = e.target.closest('button')?.dataset.a;
+    if (a === 'packet'){ open.has(p) ? open.delete(p) : open.add(p); return renderList(); }
+    if (a === 'resume'){ await post('/api/resume', {path:p}); return toast('Opened in Terminal.'); }
+    picked.has(p) ? picked.delete(p) : picked.add(p);
+    rowEl.classList.toggle('on', picked.has(p)); rowEl.querySelector('input').checked = picked.has(p);
+    return renderBar();
+  }
+});
+$('#q').addEventListener('input', e => { q = e.target.value; renderList(); });
+$('#pickOpen').addEventListener('click', () => {
+  const since = Date.now()/1000 - 12*3600;
+  const hits = visible().filter(s => s.at >= since && ['live','wait','prog','block'].includes(stateOf(s)[0]) && s.account !== to);
+  hits.forEach(s => picked.add(s.path));
+  toast(hits.length ? `Selected ${hits.length} unfinished ${hits.length > 1 ? 'sessions' : 'session'} from the last 12 hours.` : 'Nothing unfinished in the last 12 hours.');
+  renderList(); renderBar();
+});
+$('#reusage').addEventListener('click', async e => { e.target.disabled = true; e.target.textContent = 'Refreshing…'; await load(true); e.target.disabled = false; e.target.textContent = 'Refresh usage'; });
+$('#resum').addEventListener('click', async () => { await post('/api/summarize', {}); toast('Refreshing summaries. They land in a minute or two.'); setTimeout(load, 60000); });
+
+let moving = false;
+$('#moveBtn').addEventListener('click', async () => {
+  if (moving) return;   // a second run in parallel used to crash the server's save step
+  const sel = data.sessions.filter(s => picked.has(s.path) && s.kind === 'claude' && s.account !== to);
+  if (!sel.length) return;
+  moving = true; const btn = $('#moveBtn'); btn.disabled = true;
+  let ok = 0; const errs = [];
+  for (const [i, s] of sel.entries()){
+    btn.textContent = `Moving ${i + 1} of ${sel.length}…`;
+    const r = await post('/api/move', {path:s.path, to}).catch(e => ({ok:false, message:'the server did not answer'}));
+    r.ok ? (ok++, picked.delete(s.path)) : errs.push(`${s.title}: ${r.message || r.error}`);
+  }
+  moving = false;
+  toast(`${ok} moved to ${acctName(to)}.` + (errs.length ? ` ${errs.length} failed: ${errs[0]}`
+    : to === data.appAccount ? ' They are in the Claude app’s sidebar now.' : ' Switch the Claude app to that account to see them.'));
+  if (errs.length) console.warn(errs);
+  load();
+});
+
+$('#copyBtn').addEventListener('click', () => {
+  const sel = data.sessions.filter(s => picked.has(s.path));
+  const qEl = $('#queue'); qEl.hidden = false; $('#bar').classList.remove('hide');
+  $('#moveBtn').hidden = true; $('#copyBtn').hidden = true;
+  $('#what').innerHTML = `Copy one packet, paste it into a new session in <b>${esc(acctName(to))}</b>, then come back for the next.<small>Open each new session in the project folder shown on the row.</small>`;
+  qEl.innerHTML = sel.map((s,i) => `<div class="q" data-p="${esc(s.path)}"><span class="t"><b>${esc(s.project)}</b> · ${esc(s.title)}</span><button data-i="${i}">Copy packet ${i+1}</button></div>`).join('')
+    + `<div class="q"><span class="t"></span><button id="qdone">Done</button></div>`;
+});
+$('#queue').addEventListener('click', async e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.id === 'qdone'){ $('#queue').hidden = true; $('#moveBtn').hidden = false; $('#copyBtn').hidden = false; picked.clear(); load(); return; }
+  const p = b.closest('.q').dataset.p; const r = await post('/api/copy', {path:p});
+  b.textContent = r.ok ? 'Copied ✓' : 'Failed'; b.className = r.ok ? 'ok' : 'err';
+  const next = b.closest('.q').nextElementSibling?.querySelector('button'); next && next.focus();
+  toast(r.message || 'Copied.');
+});
+
+load();
+setInterval(() => { if ($('#queue').hidden && !document.querySelector('pre.packet')) load(); }, 60000);
+</script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+#!/bin/zsh
+# Buttons of the AI subscriptions menu. Nothing here runs without a click.
+set -u
+REPO="${0:A:h:h}"     # the repo this script lives in (it is symlinked into ~/.local/bin)
+URL="${AI_SUBS_URL:-$(head -1 ~/.ai-subs/url 2>/dev/null)}"
+API="${URL:-http://localhost:8787}/api/usage"
+case "${1:-}" in
+  refresh)
+    curl -sk --max-time 60 "$API?refresh=1" >/dev/null ;;
+  start)
+    launchctl kickstart -k "gui/$(id -u)/local.ai-subs" ;;
+  add)
+    label=$(osascript -e 'text returned of (display dialog "Short name for the account (e.g. personal, team2):" default answer "personal" with title "Add a Claude account")' 2>/dev/null) || exit 0
+    [[ -z "$label" ]] && exit 0
+    osascript -e "tell application \"Terminal\" to do script \"cd '$REPO' && python3 login.py anthropic --label '$label'\"" -e 'tell application "Terminal" to activate' ;;
+  login)
+    # The main folder must NOT get CLAUDE_CONFIG_DIR: its profile is ~/.claude.json,
+    # and pointing Claude Code inside the folder makes it think it is signed out.
+    cfg="${2:-}"
+    if [[ -z "$cfg" || "$cfg" == "~/.claude" || "$cfg" == "$HOME/.claude" ]]; then
+      cmd="claude auth login --claudeai"
+    else
+      cmd="CLAUDE_CONFIG_DIR=$cfg claude auth login --claudeai"
+    fi
+    osascript -e "tell application \"Terminal\" to do script \"$cmd\"" -e 'tell application "Terminal" to activate' ;;
+esac
