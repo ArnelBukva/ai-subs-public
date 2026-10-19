@@ -42,7 +42,7 @@ SUMMARIES = os.path.join(CACHE_DIR, "summaries.json")
 SUMMARY_IDLE = 45        # seconds a session must be quiet before it is re-summarised
 SUMMARY_RETRY = 1800     # seconds to wait after a failed summary (rate limit, offline)
 sys.path.insert(0, os.path.dirname(SELF))
-from store import base_url  # noqa: E402
+from store import Store, base_url, claude_login_lock, log_refresh, MAIN_CLAUDE_DIR  # noqa: E402
 PICKER_URL = base_url()
 CLAUDE_BINS = ("claude", os.path.expanduser("~/.npm-global/bin/claude"), "/opt/homebrew/bin/claude", "/usr/local/bin/claude")
 
@@ -518,9 +518,23 @@ def ask_haiku(prompt):
     if not exe:
         return None
     # No settings, hooks, plugins, MCP servers, tools or saved transcript: a bare one-shot call.
-    r = subprocess.run([exe, "-p", "--model", "haiku", "--no-session-persistence", "--setting-sources", "",
-                        "--strict-mcp-config", "--tools", ""],
-                       input=prompt, capture_output=True, text=True, timeout=90, cwd=CACHE_DIR)
+    def run():
+        return subprocess.run([exe, "-p", "--model", "haiku", "--no-session-persistence", "--setting-sources", "",
+                               "--strict-mcp-config", "--tools", ""],
+                              input=prompt, capture_output=True, text=True, timeout=90, cwd=CACHE_DIR)
+    # Four of these run at once. A call made near the token's expiry renews the login, so those
+    # calls go one at a time under the lock the server's refresh also takes.
+    cfg = os.environ.get("CLAUDE_CONFIG_DIR") or MAIN_CLAUDE_DIR
+    left = Store.claude_seconds_left(cfg)
+    try:
+        if left is not None and left > 600:
+            r = run()
+        else:
+            with claude_login_lock(cfg):
+                r = run()
+                log_refresh(cfg, "summary", r.returncode == 0, r.stdout + r.stderr)
+    except subprocess.TimeoutExpired:
+        return None
     m = re.search(r"\{.*\}", r.stdout, re.S)
     if r.returncode != 0 or not m:
         return None

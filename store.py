@@ -20,6 +20,9 @@ Accounts we own are stored in ~/.ai-subs/accounts.json, mode 0600.
 """
 
 import base64
+import contextlib
+import datetime
+import fcntl
 import hashlib
 import json
 import os
@@ -32,6 +35,36 @@ CONFIG_DIR = os.path.join(HOME, ".ai-subs")
 ACCOUNTS_FILE = os.path.join(CONFIG_DIR, "accounts.json")
 MAIN_CLAUDE_DIR = os.path.join(HOME, ".claude")
 URL_FILE = os.path.join(CONFIG_DIR, "url")
+STATE_DIR = os.path.join(HOME, ".local", "state", "ai-subs")
+REFRESH_LOG = os.path.join(STATE_DIR, "refresh.log")
+
+
+@contextlib.contextmanager
+def claude_login_lock(config_dir):
+    """Only one `claude` call from this tool may renew a login at a time. Anthropic rotates the
+    refresh token on every use; a second call presenting the old one gets invalid_grant, and
+    Claude Code then empties the stored login. The server's refresh and the summary job are
+    separate processes, so this is a file lock."""
+    os.makedirs(STATE_DIR, exist_ok=True)
+    name = "claude-" + hashlib.sha256(config_dir.encode()).hexdigest()[:8] + ".lock"
+    with open(os.path.join(STATE_DIR, name), "w") as f:
+        fcntl.flock(f, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(f, fcntl.LOCK_UN)
+
+
+def log_refresh(config_dir, caller, ok, out):
+    """One line per renewal attempt, so the next lost login has a record to read."""
+    try:
+        os.makedirs(STATE_DIR, exist_ok=True)
+        last = " ".join((out or "").split())[-160:]
+        with open(REFRESH_LOG, "a") as f:
+            f.write(f"{datetime.datetime.now().isoformat(timespec='seconds')} {caller} "
+                    f"{config_dir.replace(HOME, '~')} {'ok' if ok else 'FAILED'} {last}\n")
+    except OSError:
+        pass
 
 
 def base_url():
@@ -129,6 +162,14 @@ class Store:
         if config_dir != MAIN_CLAUDE_DIR:
             env["CLAUDE_CONFIG_DIR"] = config_dir
         return env
+
+    @classmethod
+    def claude_seconds_left(cls, config_dir):
+        """Seconds until this folder's access token expires; None when there is no login."""
+        a = cls._claude_code_account(config_dir)
+        if not a or not a.get("expires_at"):
+            return None
+        return a["expires_at"] / 1000 - time.time()
 
     @classmethod
     def _claude_code_account(cls, config_dir):
@@ -261,8 +302,13 @@ class Store:
             if time.time() - _refresh_failed_at.get(key, 0) < REFRESH_RETRY_SECONDS:
                 return None
             if account.get("kind") == "anthropic" and account.get("config_dir"):
-                ok, out = self._refresh_claude_code(account["config_dir"])
-                fresh = self._claude_code_account(account["config_dir"]) if ok else None
+                cfg = account["config_dir"]
+                with claude_login_lock(cfg):
+                    fresh = self._claude_code_account(cfg)      # another process may have renewed it meanwhile
+                    if not (fresh and fresh.get("expires_at") and fresh["expires_at"] / 1000 > time.time() + 60):
+                        ok, out = self._refresh_claude_code(cfg)
+                        log_refresh(cfg, "server", ok and "could not be refreshed" not in out, out)
+                        fresh = self._claude_code_account(cfg) if ok else None
                 if fresh and fresh.get("expires_at") and fresh["expires_at"] / 1000 > time.time() + 60:
                     return fresh
             elif account.get("kind") == "openai":
