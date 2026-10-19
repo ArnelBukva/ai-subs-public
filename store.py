@@ -130,12 +130,14 @@ class Store:
         keychain entry: "Claude Code-credentials" for ~/.claude, and
         "Claude Code-credentials-<first 8 hex of sha256(folder path)>" for any other.
         """
-        dirs = [os.path.join(HOME, ".claude")]
+        dirs = []
         for name in sorted(os.listdir(HOME)):
             # A folder called backup is a copy of another login, never an account of its own.
             if name.startswith(".claude-") and "backup" not in name and os.path.isdir(os.path.join(HOME, name)):
                 dirs.append(os.path.join(HOME, name))
-        return dirs
+        # ~/.claude last: every claude command and script on the Mac renews that login, so when a
+        # ~/.claude-<name> folder holds the same account, the dashboard reads that one instead.
+        return dirs + [os.path.join(HOME, ".claude")]
 
     @staticmethod
     def _keychain_service(config_dir):
@@ -209,6 +211,7 @@ class Store:
             "owner": "external",
             "label": label,
             "email": who.get("emailAddress"),
+            "org_uuid": who.get("organizationUuid"),
             "access_token": o.get("accessToken"),
             "refresh_token": None,          # deliberately not taken: Claude Code owns it
             "expires_at": o.get("expiresAt"),

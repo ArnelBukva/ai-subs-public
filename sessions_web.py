@@ -116,8 +116,9 @@ def usage_by_account(accounts, usage):
     out = {}
     rows = [r for r in (usage or {}).get("accounts") or [] if r.get("provider") == "Anthropic"]
     for a in accounts:
-        match = None
-        for r in rows:
+        # The login's organisation ID is the app's folder name, so this match cannot drift with names.
+        match = next((r for r in rows if r.get("orgUuid") == a["org"] and not r.get("appKey")), None)
+        for r in rows if not match else []:
             name = (r.get("account") or "").lower()
             if a["org_name"] and a["org_name"].lower() in name and "team" in name:
                 match = r

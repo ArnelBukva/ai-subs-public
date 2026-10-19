@@ -106,6 +106,7 @@ def collect(force=False):
         row["id"] = acct_id
         row["owner"] = account.get("owner")
         row["source"] = account.get("source")
+        row["orgUuid"] = account.get("org_uuid")     # how the page joins this row to the app's account folder
         if row.get("status") == "needs_login" and account.get("fix"):
             row["note"] = account["fix"]
 
